@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberTerminal PRO</title>
+    <style>
+        :root {
+            --primary: #00ff00;
+            --secondary: #ff00ff;
+            --accent: #00ffff;
+            --text: #ffffff;
+            --bg: #000000;
+            --dark-bg: #0a0a0a;
+            --youtube: #FF0000;
+            --github: #333333;
+            --telegram: #0088cc;
+            --discord: #5865F2;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Matrix эффект */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        /* Главный заголовок */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: var(--accent);
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        /* Основной контейнер */
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Терминал */
+        #terminal {
+            grid-column: span 2;
+            border: 1px solid var(--primary);
+            background-color: var(--dark-bg);
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .terminal-header {
+            background-color: rgba(0, 255, 0, 0.1);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--primary);
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .close { background-color: #ff5f56; }
+        .minimize { background-color: #ffbd2e; }
+        .maximize { background-color: #27c93f; }
+
+        #terminal-output {
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        #terminal-output div {
+            margin-bottom: 5px;
+        }
+
+        .command-line {
+            display: flex;
+            align-items: center;
+            padding: 0 15px 15px;
+            border-top: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .prompt {
+            color: var(--primary);
+            margin-right: 10px;
+        }
+
+        #terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        /* Блоки инструментов */
+        .panel {
+            background-color: var(--dark-bg);
+            border: 1px solid var(--secondary);
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
+        }
+
+        .panel-title {
+            color: var(--secondary);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .panel-title::before {
+            content: ">> ";
+            color: var(--accent);
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .tool-btn {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid;
+            border-radius: 5px;
+            padding: 12px;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .tool-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.2);
+        }
+
+        .tool-btn i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        /* Специальные цвета для соцсетей */
+        .youtube { border-color: var(--youtube); color: var(--youtube); }
+        .github { border-color: var(--github); color: var(--github); }
+        .telegram { border-color: var(--telegram); color: var(--telegram); }
+        .discord { border-color: var(--discord); color: var(--discord); }
+
+        /* Анимации */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .blink {
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse:hover {
+            animation: pulse 2s infinite;
+        }
+
+        /* Полоса прокрутки */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="header">
+        <div class="logo">CYBER TERMINAL PRO</div>
+        <div class="subtitle">Advanced Security Toolkit v5.2</div>
+    </div>
+
+    <div class="container">
+        <!-- Терминал -->
+        <div class="panel" id="terminal" style="grid-column: span 2;">
+            <div class="terminal-header">
+                <div>root@cyberterminal:~</div>
+                <div class="terminal-controls">
+                    <div class="control-btn close"></div>
+                    <div class="control-btn minimize"></div>
+                    <div class="control-btn maximize"></div>
+                </div>
+            </div>
+            <div id="terminal-output">
+                <div>> Booting CyberTerminal PRO v5.2...</div>
+                <div>> Loading security modules...</div>
+                <div>> Establishing encrypted connection...</div>
+                <div>> System ready</div>
+                <div>> Type <span style="color: var(--primary)">'help'</span> for available commands</div>
+            </div>
+            <div class="command-line">
+                <span class="prompt">root@terminal:~#</span>
+                <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+            </div>
+        </div>
+
+        <!-- Блок инструментов -->
+        <div class="panel">
+            <div class="panel-title">SECURITY TOOLS</div>
+            <div class="tool-grid">
+                <div class="tool-btn" id="network-scan">
+                    <i class="fas fa-network-wired"></i>
+                    Network Scan
+                </div>
+                <div class="tool-btn" id="vulnerability-test">
+                    <i class="fas fa-shield-alt"></i>
+                    Vuln Test
+                </div>
+                <div class="tool-btn" id="password-crack">
+                    <i class="fas fa-key"></i>
+                    Password Crack
+                </div>
+                <div class="tool-btn" id="traffic-monitor">
+                    <i class="fas fa-traffic-light"></i>
+                    Traffic Monitor
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок утилит -->
+        <div class="panel">
+            <div class="panel-title">UTILITIES</div>
+            <div class="tool-grid">
+                <div class="tool-btn" id="encrypt-tool">
+                    <i class="fas fa-lock"></i>
+                    Encrypt
+                </div>
+                <div class="tool-btn" id="decrypt-tool">
+                    <i class="fas fa-unlock"></i>
+                    Decrypt
+                </div>
+                <div class="tool-btn" id="ip-spoof">
+                    <i class="fas fa-user-secret"></i>
+                    IP Spoof
+                </div>
+                <div class="tool-btn" id="data-wipe">
+                    <i class="fas fa-eraser"></i>
+                    Data Wipe
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок социальных сетей -->
+        <div class="panel" style="grid-column: span 2;">
+            <div class="panel-title">SOCIAL NETWORKS</div>
+            <div class="tool-grid">
+                <a href="https://www.youtube.com/@Nedohavals-lite" class="tool-btn youtube" target="_blank">
+                    <i class="fab fa-youtube"></i>
+                    YouTube
+                </a>
+                <a href="https://github.com/nikitkakhodiev2" class="tool-btn github" target="_blank">
+                    <i class="fab fa-github"></i>
+                    GitHub
+                </a>
+                <a href="https://t.me/nikitashowa" class="tool-btn telegram" target="_blank">
+                    <i class="fab fa-telegram"></i>
+                    Telegram
+                </a>
+                <a href="https://discord.gg/Cp3RQtuQCM" class="tool-btn discord" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    Discord
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Улучшенный Matrix эффект
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const chars = "日ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍｦｲｸｺｿﾁﾄﾉﾌﾔﾖﾙﾚﾛﾝ0123456789ABCDEF";
+        const fontSize = 18;
+        const columns = Math.floor(canvas.width / fontSize);
+        const drops = Array(columns).fill(0);
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0f0';
+            ctx.font = `${fontSize}px monospace`;
+            
+            for (let i = 0; i < drops.length; i++) {
+                const char = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+                
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                
+                drops[i]++;
+            }
+        }
+        
+        setInterval(drawMatrix, 50);
+
+        // Расширенный терминал
+        const terminalInput = document.getElementById('terminal-input');
+        const terminalOutput = document.getElementById('terminal-output');
+        
+        const commands = {
+            help: {
+                desc: "Show all available commands",
+                execute: () => {
+                    let output = "<div>> <span style='color:var(--primary)'>Available commands:</span></div>";
+                    Object.keys(commands).forEach(cmd => {
+                        output += `<div>> <span style='color:var(--accent)'>${cmd}</span> - ${commands[cmd].desc}</div>`;
+                    });
+                    return output;
+                }
+            },
+            clear: {
+                desc: "Clear terminal screen",
+                execute: () => {
+                    terminalOutput.innerHTML = '';
+                    return '';
+                }
+            },
+            scan: {
+                desc: "Scan local network",
+                execute: () => {
+                    const devices = [
+                        { ip: "192.168.1.1", name: "Router", ports: "22, 80, 443" },
+                        { ip: "192.168.1.15", name: "Smart TV", ports: "8080" },
+                        { ip: "192.168.1.42", name: "Security Camera", ports: "80, 554" }
+                    ];
+                    
+                    let output = "<div>> Starting network scan...</div>";
+                    devices.forEach(device => {
+                        output += `<div>> Found: <span style='color:var(--accent)'>${device.ip}</span> (${device.name}) - Ports: ${device.ports}</div>`;
+                    });
+                    output += "<div>> Scan completed</div>";
+                    return output;
+                }
+            },
+            encrypt: {
+                desc: "Encrypt file with AES-256",
+                execute: () => {
+                    const key = Array(32).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                    return `<div>> Initializing AES-256 encryption...</div>
+                            <div>> Generated key: <span style='color:var(--accent)'>${key}</span></div>
+                            <div>> Encryption complete</div>`;
+                }
+            },
+            ping: {
+                desc: "Ping host",
+                execute: () => {
+                    const hosts = ["google.com", "github.com", "wikipedia.org"];
+                    const host = hosts[Math.floor(Math.random() * hosts.length)];
+                    const time = (Math.random() * 50 + 10).toFixed(2);
+                    
+                    return `<div>> Pinging ${host}...</div>
+                            <div>> Reply from ${host}: time=${time}ms</div>`;
+                }
+            }
+        };
+
+        terminalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value.trim();
+                this.value = '';
+                
+                if (command === '') return;
+                
+                let response;
+                
+                if (commands[command.toLowerCase()]) {
+                    response = commands[command.toLowerCase()].execute();
+                } else {
+                    response = `<div>> <span style='color:#ff5555'>Error:</span> Unknown command '${command}'</div>
+                               <div>> Type <span style='color:var(--primary)'>'help'</span> for available commands</div>`;
+                }
+                
+                terminalOutput.innerHTML += `<div><span style='color:var(--secondary)'>root@terminal:~#</span> ${command}</div>`;
+                if (response) {
+                    terminalOutput.innerHTML += response;
+                }
+                
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            }
+        });
+
+        // Обработчики для инструментов
+        document.querySelectorAll('.tool-btn:not([href])').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const toolId = this.id;
+                let message = '';
+                
+                switch(toolId) {
+                    case 'network-scan':
+                        message = "> Initializing network scan...<br>> Scanning subnet 192.168.1.0/24...<br>> Found 8 active hosts";
+                        break;
+                    case 'vulnerability-test':
+                        message = "> Running vulnerability assessment...<br>> Detected 3 potential vulnerabilities<br>> CVE-2023-1234: Critical";
+                        break;
+                    case 'password-crack':
+                        message = "> Starting brute-force attack...<br>> Trying common passwords...<br>> Password found: 'admin123'";
+                        break;
+                    case 'traffic-monitor':
+                        message = "> Monitoring network traffic...<br>> Detected suspicious activity from 192.168.1.33<br>> Port scanning detected";
+                        break;
+                    case 'encrypt-tool':
+                        const key = Array(32).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                        message = `> Initializing encryption...<br>> Using AES-256 algorithm<br>> Encryption key: <span style='color:var(--accent)'>${key}</span><br>> Process completed`;
+                        break;
+                    case 'decrypt-tool':
+                        message = "> Decryption module loaded<br>> Error: No encryption key provided<br>> Operation aborted";
+                        break;
+                    case 'ip-spoof':
+                        const fakeIp = `10.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+                        message = `> Spoofing IP address...<br>> New IP: <span style='color:var(--accent)'>${fakeIp}</span><br>> MAC address randomized`;
+                        break;
+                    case 'data-wipe':
+                        message = "> Initializing secure wipe...<br>> Overwriting data 7 passes...<br>> Data destruction complete";
+                        break;
+                }
+                
+                terminalOutput.innerHTML += `<div>> [${this.textContent.trim()}] tool activated</div>${message ? `<div>${message}</div>` : ''}`;
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            });
+        });
+
+        // Фокус на ввод при загрузке
+        window.addEventListener('load', () => {
+            terminalInput.focus();
+        });
+    </script>
+</body>
+</html>
